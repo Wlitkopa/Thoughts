@@ -10,7 +10,7 @@ interface CategoryRepository {
     fun search(query: String): Flow<List<Category>>
     fun getAllTags(): Flow<List<String>>
     suspend fun updateTags(ids: List<String>, tags: List<String>)
-    suspend fun clearTags(ids: List<String>)
+    suspend fun removeTags(ids: List<String>, tags: List<String>)
     suspend fun insert(category: Category)
     suspend fun update(category: Category)
     suspend fun delete(id: String)

@@ -1,0 +1,94 @@
+CREATE TABLE ThoughtEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    content TEXT NOT NULL,
+    author TEXT NOT NULL DEFAULT '',
+    source TEXT NOT NULL DEFAULT '',
+    note TEXT NOT NULL DEFAULT '',
+    category_id TEXT NOT NULL,
+    tags TEXT AS kotlin.collections.List<kotlin.String> NOT NULL DEFAULT '',
+    include_in_draws INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (category_id) REFERENCES CategoryEntity(id) ON DELETE CASCADE
+);
+
+selectAll:
+SELECT * FROM ThoughtEntity ORDER BY created_at DESC;
+
+selectById:
+SELECT * FROM ThoughtEntity WHERE id = :id;
+
+selectByCategory:
+SELECT * FROM ThoughtEntity WHERE category_id = :categoryId ORDER BY created_at DESC;
+
+selectByCategories:
+SELECT * FROM ThoughtEntity WHERE category_id IN :categoryIds ORDER BY created_at DESC;
+
+selectByTag:
+SELECT * FROM ThoughtEntity WHERE tags LIKE '%|' || :tag || '|%' ORDER BY created_at DESC;
+
+selectByCategoryAndTag:
+SELECT * FROM ThoughtEntity
+WHERE category_id = :categoryId
+  AND tags LIKE '%|' || :tag || '|%'
+ORDER BY created_at DESC;
+
+search:
+SELECT * FROM ThoughtEntity
+WHERE content LIKE '%' || :query || '%'
+   OR author LIKE '%' || :query || '%'
+   OR source LIKE '%' || :query || '%'
+   OR note LIKE '%' || :query || '%'
+ORDER BY created_at DESC;
+
+selectAllTagStrings:
+SELECT tags FROM ThoughtEntity WHERE tags != '';
+
+getRandomAll:
+SELECT * FROM ThoughtEntity
+WHERE include_in_draws = 1
+ORDER BY RANDOM() LIMIT 1;
+
+getRandomByCategories:
+SELECT * FROM ThoughtEntity
+WHERE include_in_draws = 1
+  AND category_id IN :categoryIds
+ORDER BY RANDOM() LIMIT 1;
+
+getRandomByTags:
+SELECT * FROM ThoughtEntity
+WHERE include_in_draws = 1
+  AND (tags LIKE '%|' || :tag || '|%')
+ORDER BY RANDOM() LIMIT 1;
+
+getRandomByCategoriesAndTags:
+SELECT * FROM ThoughtEntity
+WHERE include_in_draws = 1
+  AND category_id IN :categoryIds
+  AND (tags LIKE '%|' || :tag || '|%')
+ORDER BY RANDOM() LIMIT 1;
+
+insert:
+INSERT INTO ThoughtEntity(id, content, author, source, note, category_id, tags, include_in_draws, created_at, updated_at)
+VALUES (:id, :content, :author, :source, :note, :categoryId, :tags, :includeInDraws, :createdAt, :updatedAt);
+
+update:
+UPDATE ThoughtEntity
+SET content = :content,
+    author = :author,
+    source = :source,
+    note = :note,
+    category_id = :categoryId,
+    tags = :tags,
+    include_in_draws = :includeInDraws,
+    updated_at = :updatedAt
+WHERE id = :id;
+
+updateTags:
+UPDATE ThoughtEntity SET tags = :tags, updated_at = :updatedAt WHERE id IN :ids;
+
+-- removeTags jest obsługiwany w warstwie repozytorium w Kotlin
+-- (pobiera aktualne tagi, usuwa wskazane, zapisuje przez updateTags)
+
+delete:
+DELETE FROM ThoughtEntity WHERE id = :id;

@@ -1,0 +1,47 @@
+CREATE TABLE CategoryEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    tags TEXT AS kotlin.collections.List<kotlin.String> NOT NULL DEFAULT '',
+    include_in_notifications INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL
+);
+
+selectAll:
+SELECT * FROM CategoryEntity ORDER BY name ASC;
+
+selectById:
+SELECT * FROM CategoryEntity WHERE id = :id;
+
+selectByTag:
+SELECT * FROM CategoryEntity WHERE tags LIKE '%|' || :tag || '|%';
+
+search:
+SELECT * FROM CategoryEntity
+WHERE name LIKE '%' || :query || '%'
+   OR description LIKE '%' || :query || '%'
+ORDER BY name ASC;
+
+selectAllTagStrings:
+SELECT tags FROM CategoryEntity WHERE tags != '';
+
+insert:
+INSERT INTO CategoryEntity(id, name, description, tags, include_in_notifications, created_at)
+VALUES (:id, :name, :description, :tags, :includeInNotifications, :createdAt);
+
+update:
+UPDATE CategoryEntity
+SET name = :name,
+    description = :description,
+    tags = :tags,
+    include_in_notifications = :includeInNotifications
+WHERE id = :id;
+
+updateTags:
+UPDATE CategoryEntity SET tags = :tags WHERE id IN :ids;
+
+-- removeTags jest obsługiwany w warstwie repozytorium w Kotlin
+-- (pobiera aktualne tagi, usuwa wskazane, zapisuje przez updateTags)
+
+delete:
+DELETE FROM CategoryEntity WHERE id = :id;
