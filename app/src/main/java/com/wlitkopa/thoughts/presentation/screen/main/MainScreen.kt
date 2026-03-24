@@ -15,6 +15,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -50,35 +51,35 @@ class MainScreen : Screen {
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
                         icon = { Icon(Icons.Default.List, contentDescription = null) },
-                        label = { Text("Lists") },
+                        label = { Text("Lists", fontSize = 10.sp) },
                         colors = navItemColors
                     )
                     NavigationBarItem(
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 },
                         icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                        label = { Text("Home") },
+                        label = { Text("Home", fontSize = 10.sp) },
                         colors = navItemColors
                     )
                     NavigationBarItem(
                         selected = selectedTab == 2,
                         onClick = { selectedTab = 2 },
                         icon = { Icon(Icons.AutoMirrored.Filled.SpeakerNotes, contentDescription = null) },
-                        label = { Text("Thoughts") },
+                        label = { Text("Thoughts", fontSize = 10.sp) },
                         colors = navItemColors
                     )
                     NavigationBarItem(
                         selected = selectedTab == 3,
                         onClick = { selectedTab = 3 },
                         icon = { Icon(Icons.Default.Folder, contentDescription = null) },
-                        label = { Text("Categories") },
+                        label = { Text("Categories", fontSize = 10.sp) },
                         colors = navItemColors
                     )
                     NavigationBarItem(
                         selected = selectedTab == 4,
                         onClick = { selectedTab = 4 },
                         icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                        label = { Text("Settings") },
+                        label = { Text("Settings", fontSize = 10.sp) },
                         colors = navItemColors
                     )
                 }
