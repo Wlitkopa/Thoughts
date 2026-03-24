@@ -13,16 +13,25 @@ class NotificationWorker(
 ) : CoroutineWorker(context, params), KoinComponent {
 
     private val getRandomThought: GetRandomThoughtUseCase by inject()
+    private val scheduler: NotificationScheduler by inject()
 
     override suspend fun doWork(): Result {
+        val cronExpression = inputData.getString(KEY_CRON_EXPRESSION)
+            ?: return Result.success()
+
         val prefs = NotificationPreferences(context)
+        if (!prefs.isEnabled) return Result.success()
 
         val thought = getRandomThought(
             categoryIds = prefs.categoryIds.toList(),
             tags = prefs.tags.toList()
-        ) ?: return Result.success()
+        )
+        if (thought != null) {
+            showThoughtNotification(context, thought)
+        }
 
-        showThoughtNotification(context, thought)
+        scheduler.schedule(cronExpression)
+
         return Result.success()
     }
 }

@@ -4,11 +4,11 @@ import android.content.Context
 
 private const val PREFS_NAME = "notification_prefs"
 private const val KEY_ENABLED = "enabled"
-private const val KEY_INTERVAL_HOURS = "interval_hours"
-private const val KEY_START_HOUR = "start_hour"
-private const val KEY_START_MINUTE = "start_minute"
+private const val KEY_CRON = "cron_expression"
 private const val KEY_CATEGORY_IDS = "category_ids"
 private const val KEY_TAGS = "tags"
+
+const val DEFAULT_CRON = "0 8 * * *" // every day at 08:00
 
 class NotificationPreferences(context: Context) {
 
@@ -18,17 +18,9 @@ class NotificationPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_ENABLED, false)
         set(value) = prefs.edit().putBoolean(KEY_ENABLED, value).apply()
 
-    var intervalHours: Int
-        get() = prefs.getInt(KEY_INTERVAL_HOURS, 24)
-        set(value) = prefs.edit().putInt(KEY_INTERVAL_HOURS, value).apply()
-
-    var startHour: Int
-        get() = prefs.getInt(KEY_START_HOUR, 8)
-        set(value) = prefs.edit().putInt(KEY_START_HOUR, value).apply()
-
-    var startMinute: Int
-        get() = prefs.getInt(KEY_START_MINUTE, 0)
-        set(value) = prefs.edit().putInt(KEY_START_MINUTE, value).apply()
+    var cronExpression: String
+        get() = prefs.getString(KEY_CRON, DEFAULT_CRON) ?: DEFAULT_CRON
+        set(value) = prefs.edit().putString(KEY_CRON, value).apply()
 
     var categoryIds: Set<String>
         get() = prefs.getStringSet(KEY_CATEGORY_IDS, emptySet()) ?: emptySet()
