@@ -57,7 +57,8 @@ class LocalCategoryRepository(database: ThoughtsDatabase) : CategoryRepository {
                 description = category.description,
                 tags = category.tags,
                 includeInNotifications = if (category.includeInNotifications) 1L else 0L,
-                createdAt = category.createdAt
+                createdAt = category.createdAt,
+                color = category.color
             )
         }
     }
@@ -69,6 +70,7 @@ class LocalCategoryRepository(database: ThoughtsDatabase) : CategoryRepository {
                 description = category.description,
                 tags = category.tags,
                 includeInNotifications = if (category.includeInNotifications) 1L else 0L,
+                color = category.color,
                 id = category.id
             )
         }

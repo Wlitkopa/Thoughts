@@ -9,7 +9,8 @@ fun CategoryEntity.toDomain() = Category(
     description = description,
     tags = tags,
     includeInNotifications = include_in_notifications == 1L,
-    createdAt = created_at
+    createdAt = created_at,
+    color = color
 )
 
 fun Category.toInsertParams() = listOf(

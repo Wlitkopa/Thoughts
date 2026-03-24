@@ -1,6 +1,8 @@
 package com.wlitkopa.thoughts.presentation.screen.category
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
@@ -234,17 +237,35 @@ private fun CategoryItem(
     onDelete: () -> Unit,
     onToggleDraw: () -> Unit = {}
 ) {
+    val barColor = if (category.color.isNotEmpty()) {
+        runCatching { Color(android.graphics.Color.parseColor(category.color)) }.getOrNull()
+    } else null
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (barColor != null) {
+                Box(
+                    modifier = Modifier
+                        .width(6.dp)
+                        .height(72.dp)
+                        .background(barColor)
+                )
+            } else {
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = category.name,
@@ -290,6 +311,7 @@ private fun CategoryItem(
                     contentDescription = "Delete",
                     tint = MaterialTheme.colorScheme.error
                 )
+            }
             }
         }
     }

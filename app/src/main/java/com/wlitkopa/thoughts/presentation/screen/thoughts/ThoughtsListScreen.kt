@@ -1,7 +1,9 @@
 package com.wlitkopa.thoughts.presentation.screen.thoughts
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
@@ -273,6 +277,10 @@ private fun ThoughtItem(
     onClick: () -> Unit = {},
     onToggleDraw: () -> Unit = {}
 ) {
+    val dotColor = category?.color?.takeIf { it.isNotEmpty() }?.let { hex ->
+        runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrNull()
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -286,6 +294,16 @@ private fun ThoughtItem(
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (dotColor != null) {
+                Box(
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(dotColor)
+                        .align(Alignment.Top)
+                )
+            }
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)

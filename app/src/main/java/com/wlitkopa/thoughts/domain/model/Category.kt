@@ -6,5 +6,6 @@ data class Category(
     val description: String = "",
     val tags: List<String> = emptyList(),
     val includeInNotifications: Boolean = true,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val color: String = ""
 )

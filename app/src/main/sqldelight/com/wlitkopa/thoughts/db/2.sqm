@@ -1,0 +1,1 @@
+ALTER TABLE CategoryEntity ADD COLUMN color TEXT NOT NULL DEFAULT '';
