@@ -39,6 +39,7 @@ WHERE content LIKE '%' || :query || '%'
    OR author LIKE '%' || :query || '%'
    OR source LIKE '%' || :query || '%'
    OR note LIKE '%' || :query || '%'
+   OR tags LIKE '%' || :query || '%'
 ORDER BY created_at DESC;
 
 selectAllTagStrings:

@@ -21,6 +21,7 @@ search:
 SELECT * FROM CategoryEntity
 WHERE name LIKE '%' || :query || '%'
    OR description LIKE '%' || :query || '%'
+   OR tags LIKE '%' || :query || '%'
 ORDER BY name ASC;
 
 selectAllTagStrings:
