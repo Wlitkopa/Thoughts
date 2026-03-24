@@ -3,10 +3,11 @@ package com.wlitkopa.thoughts.presentation.screen.main
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.SpeakerNotes
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.automirrored.filled.SpeakerNotes
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -24,6 +25,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.Navigator
 import com.wlitkopa.thoughts.presentation.screen.category.CategoryListScreen
 import com.wlitkopa.thoughts.presentation.screen.home.HomeContent
+import com.wlitkopa.thoughts.presentation.screen.lists.ListsScreen
 import com.wlitkopa.thoughts.presentation.screen.settings.SettingsScreen
 import com.wlitkopa.thoughts.presentation.screen.thoughts.ThoughtsListScreen
 
@@ -31,7 +33,7 @@ class MainScreen : Screen {
 
     @Composable
     override fun Content() {
-        var selectedTab by remember { mutableIntStateOf(0) }
+        var selectedTab by remember { mutableIntStateOf(1) } // default: Home
 
         val navItemColors = NavigationBarItemDefaults.colors(
             selectedIconColor = MaterialTheme.colorScheme.secondary,
@@ -43,33 +45,38 @@ class MainScreen : Screen {
 
         Scaffold(
             bottomBar = {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                ) {
+                NavigationBar(containerColor = MaterialTheme.colorScheme.primaryContainer) {
                     NavigationBarItem(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
-                        icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                        label = { Text("Home") },
+                        icon = { Icon(Icons.Default.List, contentDescription = null) },
+                        label = { Text("Lists") },
                         colors = navItemColors
                     )
                     NavigationBarItem(
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 },
-                        icon = { Icon(Icons.AutoMirrored.Filled.SpeakerNotes, contentDescription = null) },
-                        label = { Text("Thoughts") },
+                        icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                        label = { Text("Home") },
                         colors = navItemColors
                     )
                     NavigationBarItem(
                         selected = selectedTab == 2,
                         onClick = { selectedTab = 2 },
-                        icon = { Icon(Icons.Default.Folder, contentDescription = null) },
-                        label = { Text("Categories") },
+                        icon = { Icon(Icons.AutoMirrored.Filled.SpeakerNotes, contentDescription = null) },
+                        label = { Text("Thoughts") },
                         colors = navItemColors
                     )
                     NavigationBarItem(
                         selected = selectedTab == 3,
                         onClick = { selectedTab = 3 },
+                        icon = { Icon(Icons.Default.Folder, contentDescription = null) },
+                        label = { Text("Categories") },
+                        colors = navItemColors
+                    )
+                    NavigationBarItem(
+                        selected = selectedTab == 4,
+                        onClick = { selectedTab = 4 },
                         icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                         label = { Text("Settings") },
                         colors = navItemColors
@@ -79,10 +86,11 @@ class MainScreen : Screen {
         ) { padding ->
             Box(modifier = Modifier.padding(padding)) {
                 when (selectedTab) {
-                    0 -> HomeContent()
-                    1 -> Navigator(ThoughtsListScreen())
-                    2 -> Navigator(CategoryListScreen())
-                    3 -> Navigator(SettingsScreen())
+                    0 -> Navigator(ListsScreen())
+                    1 -> HomeContent()
+                    2 -> Navigator(ThoughtsListScreen())
+                    3 -> Navigator(CategoryListScreen())
+                    4 -> Navigator(SettingsScreen())
                 }
             }
         }

@@ -23,7 +23,15 @@ import com.wlitkopa.thoughts.domain.usecase.thought.GetThoughtsByTagUseCase
 import com.wlitkopa.thoughts.domain.usecase.thought.RemoveThoughtTagsUseCase
 import com.wlitkopa.thoughts.domain.usecase.thought.SearchThoughtsUseCase
 import com.wlitkopa.thoughts.domain.usecase.thought.UpdateThoughtTagsUseCase
+import com.wlitkopa.thoughts.domain.usecase.thought.GetAllThoughtAuthorsUseCase
+import com.wlitkopa.thoughts.domain.usecase.thought.GetAllThoughtSourcesUseCase
 import com.wlitkopa.thoughts.domain.usecase.thought.UpdateThoughtUseCase
+import com.wlitkopa.thoughts.domain.usecase.list.AddSavedListUseCase
+import com.wlitkopa.thoughts.domain.usecase.list.DeleteSavedListUseCase
+import com.wlitkopa.thoughts.domain.usecase.list.GetAllSavedListsUseCase
+import com.wlitkopa.thoughts.domain.usecase.list.GetSavedListByIdUseCase
+import com.wlitkopa.thoughts.domain.usecase.list.GetThoughtsForListUseCase
+import com.wlitkopa.thoughts.domain.usecase.list.UpdateSavedListUseCase
 import org.koin.dsl.module
 
 val useCaseModule = module {
@@ -54,4 +62,14 @@ val useCaseModule = module {
     factory { DeleteThoughtUseCase(get()) }
     factory { UpdateThoughtTagsUseCase(get()) }
     factory { RemoveThoughtTagsUseCase(get()) }
+    factory { GetAllThoughtAuthorsUseCase(get()) }
+    factory { GetAllThoughtSourcesUseCase(get()) }
+
+    // SavedList
+    factory { GetAllSavedListsUseCase(get()) }
+    factory { GetSavedListByIdUseCase(get()) }
+    factory { AddSavedListUseCase(get()) }
+    factory { UpdateSavedListUseCase(get()) }
+    factory { DeleteSavedListUseCase(get()) }
+    factory { GetThoughtsForListUseCase(get(), get()) }
 }

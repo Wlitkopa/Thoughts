@@ -45,6 +45,12 @@ ORDER BY created_at DESC;
 selectAllTagStrings:
 SELECT tags FROM ThoughtEntity WHERE tags != '';
 
+selectAllAuthors:
+SELECT DISTINCT author FROM ThoughtEntity WHERE author != '' ORDER BY author ASC;
+
+selectAllSources:
+SELECT DISTINCT source FROM ThoughtEntity WHERE source != '' ORDER BY source ASC;
+
 getRandomAll:
 SELECT * FROM ThoughtEntity
 WHERE include_in_draws = 1

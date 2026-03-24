@@ -3,6 +3,7 @@ package com.wlitkopa.thoughts.data.local
 import android.content.Context
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.wlitkopa.thoughts.db.CategoryEntity
+import com.wlitkopa.thoughts.db.SavedListEntity
 import com.wlitkopa.thoughts.db.ThoughtsDatabase
 import com.wlitkopa.thoughts.db.ThoughtEntity
 
@@ -15,6 +16,13 @@ fun createDatabase(context: Context): ThoughtsDatabase {
     return ThoughtsDatabase(
         driver = driver,
         CategoryEntityAdapter = CategoryEntity.Adapter(tagsAdapter),
-        ThoughtEntityAdapter = ThoughtEntity.Adapter(tagsAdapter)
+        ThoughtEntityAdapter = ThoughtEntity.Adapter(tagsAdapter),
+        SavedListEntityAdapter = SavedListEntity.Adapter(
+            filter_category_idsAdapter = tagsAdapter,
+            filter_tagsAdapter = tagsAdapter,
+            filter_authorsAdapter = tagsAdapter,
+            filter_sourcesAdapter = tagsAdapter,
+            pinned_thought_idsAdapter = tagsAdapter
+        )
     )
 }

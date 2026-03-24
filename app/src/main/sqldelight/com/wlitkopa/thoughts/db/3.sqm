@@ -1,0 +1,11 @@
+CREATE TABLE SavedListEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    filter_category_ids TEXT NOT NULL DEFAULT '',
+    filter_tags TEXT NOT NULL DEFAULT '',
+    filter_authors TEXT NOT NULL DEFAULT '',
+    filter_sources TEXT NOT NULL DEFAULT '',
+    pinned_thought_ids TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL
+);

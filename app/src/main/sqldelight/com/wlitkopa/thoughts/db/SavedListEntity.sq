@@ -1,0 +1,35 @@
+CREATE TABLE SavedListEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    filter_category_ids TEXT AS kotlin.collections.List<kotlin.String> NOT NULL DEFAULT '',
+    filter_tags TEXT AS kotlin.collections.List<kotlin.String> NOT NULL DEFAULT '',
+    filter_authors TEXT AS kotlin.collections.List<kotlin.String> NOT NULL DEFAULT '',
+    filter_sources TEXT AS kotlin.collections.List<kotlin.String> NOT NULL DEFAULT '',
+    pinned_thought_ids TEXT AS kotlin.collections.List<kotlin.String> NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL
+);
+
+selectAll:
+SELECT * FROM SavedListEntity ORDER BY name ASC;
+
+selectById:
+SELECT * FROM SavedListEntity WHERE id = :id;
+
+insert:
+INSERT INTO SavedListEntity(id, name, description, filter_category_ids, filter_tags, filter_authors, filter_sources, pinned_thought_ids, created_at)
+VALUES (:id, :name, :description, :filterCategoryIds, :filterTags, :filterAuthors, :filterSources, :pinnedThoughtIds, :createdAt);
+
+update:
+UPDATE SavedListEntity
+SET name = :name,
+    description = :description,
+    filter_category_ids = :filterCategoryIds,
+    filter_tags = :filterTags,
+    filter_authors = :filterAuthors,
+    filter_sources = :filterSources,
+    pinned_thought_ids = :pinnedThoughtIds
+WHERE id = :id;
+
+delete:
+DELETE FROM SavedListEntity WHERE id = :id;

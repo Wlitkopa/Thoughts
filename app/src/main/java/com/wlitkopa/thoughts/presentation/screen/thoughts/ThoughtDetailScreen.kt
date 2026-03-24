@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,10 +16,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -31,7 +34,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +50,8 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.wlitkopa.thoughts.domain.model.Category
 import com.wlitkopa.thoughts.domain.model.Thought
 import com.wlitkopa.thoughts.domain.usecase.category.GetAllCategoriesUseCase
+import com.wlitkopa.thoughts.domain.usecase.list.GetAllSavedListsUseCase
+import com.wlitkopa.thoughts.domain.usecase.list.UpdateSavedListUseCase
 import com.wlitkopa.thoughts.domain.usecase.thought.DeleteThoughtUseCase
 import com.wlitkopa.thoughts.domain.usecase.thought.GetThoughtByIdUseCase
 import kotlinx.coroutines.launch
@@ -65,13 +69,17 @@ class ThoughtDetailScreen(val thoughtId: String) : Screen {
         val getThoughtById: GetThoughtByIdUseCase = koinInject()
         val getAllCategories: GetAllCategoriesUseCase = koinInject()
         val deleteThought: DeleteThoughtUseCase = koinInject()
+        val getAllSavedLists: GetAllSavedListsUseCase = koinInject()
+        val updateSavedList: UpdateSavedListUseCase = koinInject()
         val scope = rememberCoroutineScope()
 
         val thought by getThoughtById(thoughtId).collectAsState(initial = null)
         val categories by getAllCategories().collectAsState(initial = emptyList())
         val categoryMap = categories.associateBy { it.id }
+        val savedLists by getAllSavedLists().collectAsState(initial = emptyList())
 
         var showDeleteDialog by remember { mutableStateOf(false) }
+        var showAddToListDialog by remember { mutableStateOf(false) }
 
         Scaffold(
             topBar = {
@@ -83,6 +91,9 @@ class ThoughtDetailScreen(val thoughtId: String) : Screen {
                         }
                     },
                     actions = {
+                        IconButton(onClick = { showAddToListDialog = true }) {
+                            Icon(Icons.Default.PlaylistAdd, contentDescription = "Add to list")
+                        }
                         IconButton(onClick = { navigator.push(AddEditThoughtScreen(thoughtId)) }) {
                             Icon(Icons.Default.Edit, contentDescription = "Edit")
                         }
@@ -137,9 +148,46 @@ class ThoughtDetailScreen(val thoughtId: String) : Screen {
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDeleteDialog = false }) {
-                        Text("Cancel")
+                    TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+                }
+            )
+        }
+
+        if (showAddToListDialog) {
+            AlertDialog(
+                onDismissRequest = { showAddToListDialog = false },
+                title = { Text("Add to list") },
+                text = {
+                    if (savedLists.isEmpty()) {
+                        Text("No lists yet. Create a list first.")
+                    } else {
+                        Column {
+                            savedLists.forEach { list ->
+                                val isPinned = thoughtId in list.pinnedThoughtIds
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = isPinned,
+                                        onCheckedChange = { checked ->
+                                            scope.launch {
+                                                val newPinned = if (checked)
+                                                    list.pinnedThoughtIds + thoughtId
+                                                else
+                                                    list.pinnedThoughtIds - thoughtId
+                                                updateSavedList(list.copy(pinnedThoughtIds = newPinned))
+                                            }
+                                        }
+                                    )
+                                    Text(list.name, style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                        }
                     }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showAddToListDialog = false }) { Text("Done") }
                 }
             )
         }
@@ -162,7 +210,6 @@ private fun ThoughtDetailContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Main quote card
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -190,7 +237,6 @@ private fun ThoughtDetailContent(
             }
         }
 
-        // Note
         if (thought.note.isNotBlank()) {
             Column {
                 Text(
@@ -209,7 +255,6 @@ private fun ThoughtDetailContent(
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
 
-        // Metadata
         if (category != null) {
             DetailRow(label = "Category", value = category.name)
         }

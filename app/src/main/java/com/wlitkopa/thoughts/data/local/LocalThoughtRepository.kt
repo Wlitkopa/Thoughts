@@ -41,6 +41,12 @@ class LocalThoughtRepository(database: ThoughtsDatabase) : ThoughtRepository {
         queries.selectAllTagStrings().asFlow().mapToList(Dispatchers.IO)
             .map { tagLists -> tagLists.flatten().distinct().sorted() }
 
+    override fun getAllAuthors(): Flow<List<String>> =
+        queries.selectAllAuthors().asFlow().mapToList(Dispatchers.IO)
+
+    override fun getAllSources(): Flow<List<String>> =
+        queries.selectAllSources().asFlow().mapToList(Dispatchers.IO)
+
     override suspend fun getRandom(categoryIds: List<String>, tags: List<String>): Thought? {
         return withContext(Dispatchers.IO) {
             when {
