@@ -8,7 +8,7 @@ import com.wlitkopa.thoughts.R
 import com.wlitkopa.thoughts.domain.model.Thought
 
 const val CHANNEL_ID = "thoughts_channel"
-const val CHANNEL_NAME = "Losowe myśli"
+private const val CHANNEL_NAME = "Thoughts"
 private const val NOTIFICATION_ID = 1001
 
 fun createNotificationChannel(context: Context) {
@@ -17,19 +17,17 @@ fun createNotificationChannel(context: Context) {
         CHANNEL_NAME,
         NotificationManager.IMPORTANCE_DEFAULT
     ).apply {
-        description = "Cykliczne losowanie myśli i cytatów"
+        description = "Periodic random thought notifications"
     }
     val manager = context.getSystemService(NotificationManager::class.java)
     manager.createNotificationChannel(channel)
 }
 
 fun showThoughtNotification(context: Context, thought: Thought) {
-    val title = when {
-        thought.author.isNotBlank() && thought.source.isNotBlank() -> "${thought.author} — ${thought.source}"
-        thought.author.isNotBlank() -> thought.author
-        thought.source.isNotBlank() -> thought.source
-        else -> CHANNEL_NAME
-    }
+    val title = listOf(thought.author, thought.source)
+        .filter { it.isNotBlank() }
+        .joinToString(" — ")
+        .ifBlank { "Thoughts" }
 
     val notification = NotificationCompat.Builder(context, CHANNEL_ID)
         .setSmallIcon(R.drawable.ic_launcher_foreground)

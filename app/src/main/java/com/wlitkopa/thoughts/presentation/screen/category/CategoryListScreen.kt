@@ -9,12 +9,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -56,6 +58,7 @@ import com.wlitkopa.thoughts.domain.model.Category
 import com.wlitkopa.thoughts.domain.usecase.category.DeleteCategoryUseCase
 import com.wlitkopa.thoughts.domain.usecase.category.GetAllCategoriesUseCase
 import com.wlitkopa.thoughts.domain.usecase.category.SearchCategoriesUseCase
+import com.wlitkopa.thoughts.domain.usecase.category.UpdateCategoryUseCase
 import com.wlitkopa.thoughts.domain.usecase.thought.GetAllThoughtsUseCase
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -70,6 +73,7 @@ class CategoryListScreen : Screen {
         val searchCategories: SearchCategoriesUseCase = koinInject()
         val getAllThoughts: GetAllThoughtsUseCase = koinInject()
         val deleteCategory: DeleteCategoryUseCase = koinInject()
+        val updateCategory: UpdateCategoryUseCase = koinInject()
         val scope = rememberCoroutineScope()
 
         var isSearchActive by remember { mutableStateOf(false) }
@@ -187,7 +191,12 @@ class CategoryListScreen : Screen {
                             category = category,
                             thoughtCount = thoughtCountByCategory[category.id] ?: 0,
                             onEdit = { navigator.push(AddEditCategoryScreen(category.id)) },
-                            onDelete = { categoryToDelete = category }
+                            onDelete = { categoryToDelete = category },
+                            onToggleDraw = {
+                                scope.launch {
+                                    updateCategory(category.copy(includeInNotifications = !category.includeInNotifications))
+                                }
+                            }
                         )
                     }
                 }
@@ -222,7 +231,8 @@ private fun CategoryItem(
     category: Category,
     thoughtCount: Int,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onToggleDraw: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -254,6 +264,17 @@ private fun CategoryItem(
                     text = "$thoughtCount thought${if (thoughtCount != 1) "s" else ""}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.secondary
+                )
+            }
+            IconButton(onClick = onToggleDraw, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Casino,
+                    contentDescription = if (category.includeInNotifications) "Included in draws" else "Excluded from draws",
+                    tint = if (category.includeInNotifications)
+                        MaterialTheme.colorScheme.secondary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                    modifier = Modifier.size(18.dp)
                 )
             }
             IconButton(onClick = onEdit) {

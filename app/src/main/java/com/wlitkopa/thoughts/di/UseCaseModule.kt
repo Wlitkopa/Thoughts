@@ -48,7 +48,7 @@ val useCaseModule = module {
     factory { GetThoughtsByCategoryAndTagUseCase(get()) }
     factory { SearchThoughtsUseCase(get()) }
     factory { GetAllThoughtTagsUseCase(get()) }
-    factory { GetRandomThoughtUseCase(get()) }
+    factory { GetRandomThoughtUseCase(get(), get()) }
     factory { AddThoughtUseCase(get()) }
     factory { UpdateThoughtUseCase(get()) }
     factory { DeleteThoughtUseCase(get()) }

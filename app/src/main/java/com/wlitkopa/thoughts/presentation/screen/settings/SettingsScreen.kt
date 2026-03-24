@@ -17,8 +17,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -30,26 +33,31 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import com.wlitkopa.thoughts.data.local.ThemeRepository
 import com.wlitkopa.thoughts.domain.usecase.category.GetAllCategoriesUseCase
+import com.wlitkopa.thoughts.domain.usecase.thought.GetRandomThoughtUseCase
 import com.wlitkopa.thoughts.notification.CronParser
 import com.wlitkopa.thoughts.notification.DEFAULT_CRON
 import com.wlitkopa.thoughts.notification.NotificationPreferences
 import com.wlitkopa.thoughts.notification.NotificationScheduler
+import com.wlitkopa.thoughts.notification.showThoughtNotification
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 private val cronPresets = listOf(
-    "0 8 * * *"     to "Daily at 08:00",
-    "0 8,20 * * *"  to "Twice a day (8 & 20)",
-    "0 */6 * * *"   to "Every 6 hours",
-    "0 9 * * 1-5"   to "Weekdays at 09:00",
-    "0 10 * * 0,6"  to "Weekends at 10:00",
-    "0 8 * * 1"     to "Every Monday at 08:00"
+    "0 8 * * *"    to "Daily at 08:00",
+    "0 8,20 * * *" to "Twice a day (8 & 20)",
+    "0 */6 * * *"  to "Every 6 hours",
+    "0 9 * * 1-5"  to "Weekdays at 09:00",
+    "0 10 * * 0,6" to "Weekends at 10:00",
+    "0 8 * * 1"    to "Every Monday at 08:00"
 )
 
 class SettingsScreen : Screen {
@@ -57,10 +65,15 @@ class SettingsScreen : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
+        val context = LocalContext.current
         val themeRepository: ThemeRepository = koinInject()
         val notifPrefs: NotificationPreferences = koinInject()
         val scheduler: NotificationScheduler = koinInject()
         val getAllCategories: GetAllCategoriesUseCase = koinInject()
+        val getRandomThought: GetRandomThoughtUseCase = koinInject()
+
+        val scope = rememberCoroutineScope()
+        val snackbarHostState = remember { SnackbarHostState() }
 
         val isDarkTheme by themeRepository.isDarkTheme.collectAsState()
         val categories by getAllCategories().collectAsState(initial = emptyList())
@@ -70,11 +83,14 @@ class SettingsScreen : Screen {
         var selectedCategoryIds by remember { mutableStateOf(notifPrefs.categoryIds) }
 
         val cronValid by remember { derivedStateOf { CronParser.isValid(cronInput) } }
-        val nextExecutions by remember { derivedStateOf {
-            if (cronValid) CronParser.describeNext(cronInput, 3) else emptyList()
-        }}
+        val nextExecutions by remember {
+            derivedStateOf {
+                if (cronValid) CronParser.describeNext(cronInput, 3) else emptyList()
+            }
+        }
 
         Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 TopAppBar(
                     title = { Text("Settings") },
@@ -91,7 +107,7 @@ class SettingsScreen : Screen {
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
             ) {
-                // ── Appearance ──────────────────────────────────────────────
+                // ── Appearance ───────────────────────────────────────────────
                 SectionHeader("Appearance")
                 ListItem(
                     headlineContent = { Text("Dark mode") },
@@ -119,6 +135,10 @@ class SettingsScreen : Screen {
                                 if (enabled && cronValid) {
                                     notifPrefs.cronExpression = cronInput
                                     scheduler.schedule(cronInput)
+                                    scope.launch {
+                                        val next = CronParser.describeNext(cronInput, 1).firstOrNull()
+                                        snackbarHostState.showSnackbar("Scheduled. Next: $next")
+                                    }
                                 } else {
                                     scheduler.cancel()
                                 }
@@ -190,7 +210,12 @@ class SettingsScreen : Screen {
                                     row.forEach { (cron, label) ->
                                         SuggestionChip(
                                             onClick = { cronInput = cron },
-                                            label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                                            label = {
+                                                Text(
+                                                    label,
+                                                    style = MaterialTheme.typography.labelSmall
+                                                )
+                                            }
                                         )
                                     }
                                 }
@@ -230,11 +255,35 @@ class SettingsScreen : Screen {
                                 notifPrefs.cronExpression = cronInput
                                 notifPrefs.categoryIds = selectedCategoryIds
                                 scheduler.schedule(cronInput)
+                                scope.launch {
+                                    val next = CronParser.describeNext(cronInput, 1).firstOrNull()
+                                    snackbarHostState.showSnackbar("Saved. Next notification: $next")
+                                }
                             },
                             modifier = Modifier.fillMaxWidth(),
                             enabled = cronValid
                         ) {
                             Text("Apply")
+                        }
+
+                        // Test notification
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch {
+                                    val thought = getRandomThought(
+                                        categoryIds = selectedCategoryIds.toList()
+                                    )
+                                    if (thought != null) {
+                                        showThoughtNotification(context, thought)
+                                        snackbarHostState.showSnackbar("Test notification sent!")
+                                    } else {
+                                        snackbarHostState.showSnackbar("No thoughts found to show.")
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Send test notification")
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))

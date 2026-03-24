@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -59,6 +61,7 @@ import com.wlitkopa.thoughts.domain.usecase.category.GetAllCategoriesUseCase
 import com.wlitkopa.thoughts.domain.usecase.thought.DeleteThoughtUseCase
 import com.wlitkopa.thoughts.domain.usecase.thought.GetAllThoughtsUseCase
 import com.wlitkopa.thoughts.domain.usecase.thought.SearchThoughtsUseCase
+import com.wlitkopa.thoughts.domain.usecase.thought.UpdateThoughtUseCase
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -74,6 +77,7 @@ class ThoughtsListScreen : Screen {
         val getAllCategories: GetAllCategoriesUseCase = koinInject()
         val searchThoughts: SearchThoughtsUseCase = koinInject()
         val deleteThought: DeleteThoughtUseCase = koinInject()
+        val updateThought: UpdateThoughtUseCase = koinInject()
         val scope = rememberCoroutineScope()
 
         var isSearchActive by remember { mutableStateOf(false) }
@@ -224,7 +228,12 @@ class ThoughtsListScreen : Screen {
                                 category = categoryMap[thought.categoryId],
                                 onEdit = { navigator.push(AddEditThoughtScreen(thought.id)) },
                                 onDelete = { thoughtToDelete = thought },
-                                onClick = { navigator.push(ThoughtDetailScreen(thought.id)) }
+                                onClick = { navigator.push(ThoughtDetailScreen(thought.id)) },
+                                onToggleDraw = {
+                                    scope.launch {
+                                        updateThought(thought.copy(includeInDraws = !thought.includeInDraws))
+                                    }
+                                }
                             )
                         }
                     }
@@ -261,7 +270,8 @@ private fun ThoughtItem(
     category: Category?,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    onToggleDraw: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
@@ -274,7 +284,7 @@ private fun ThoughtItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.Top
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
                 modifier = Modifier.weight(1f),
@@ -303,6 +313,17 @@ private fun ThoughtItem(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+            IconButton(onClick = onToggleDraw, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Casino,
+                    contentDescription = if (thought.includeInDraws) "Included in draws" else "Excluded from draws",
+                    tint = if (thought.includeInDraws)
+                        MaterialTheme.colorScheme.secondary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                    modifier = Modifier.size(18.dp)
+                )
             }
             IconButton(onClick = onEdit) {
                 Icon(
