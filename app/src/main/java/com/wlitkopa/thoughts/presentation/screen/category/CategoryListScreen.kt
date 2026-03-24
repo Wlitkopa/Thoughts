@@ -11,10 +11,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -26,9 +30,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +44,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -44,6 +55,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.wlitkopa.thoughts.domain.model.Category
 import com.wlitkopa.thoughts.domain.usecase.category.DeleteCategoryUseCase
 import com.wlitkopa.thoughts.domain.usecase.category.GetAllCategoriesUseCase
+import com.wlitkopa.thoughts.domain.usecase.category.SearchCategoriesUseCase
 import com.wlitkopa.thoughts.domain.usecase.thought.GetAllThoughtsUseCase
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -55,23 +67,83 @@ class CategoryListScreen : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val getAllCategories: GetAllCategoriesUseCase = koinInject()
+        val searchCategories: SearchCategoriesUseCase = koinInject()
         val getAllThoughts: GetAllThoughtsUseCase = koinInject()
         val deleteCategory: DeleteCategoryUseCase = koinInject()
         val scope = rememberCoroutineScope()
 
-        val categories by getAllCategories().collectAsState(initial = emptyList())
+        var isSearchActive by remember { mutableStateOf(false) }
+        var searchQuery by remember { mutableStateOf("") }
+        var categoryToDelete by remember { mutableStateOf<Category?>(null) }
+
+        val focusRequester = remember { FocusRequester() }
+
+        LaunchedEffect(isSearchActive) {
+            if (isSearchActive) focusRequester.requestFocus()
+        }
+
+        val categories by remember(searchQuery, isSearchActive) {
+            if (isSearchActive && searchQuery.isNotBlank())
+                searchCategories(searchQuery)
+            else
+                getAllCategories()
+        }.collectAsState(initial = emptyList())
+
         val thoughts by getAllThoughts().collectAsState(initial = emptyList())
         val thoughtCountByCategory = thoughts.groupingBy { it.categoryId }.eachCount()
-
-        var categoryToDelete by remember { mutableStateOf<Category?>(null) }
 
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Categories") },
+                    title = {
+                        if (isSearchActive) {
+                            TextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                placeholder = { Text("Search categories…") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(onSearch = {}),
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequester)
+                            )
+                        } else {
+                            Text("Categories")
+                        }
+                    },
+                    navigationIcon = {
+                        if (isSearchActive) {
+                            IconButton(onClick = {
+                                isSearchActive = false
+                                searchQuery = ""
+                            }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Close search")
+                            }
+                        }
+                    },
+                    actions = {
+                        if (!isSearchActive) {
+                            IconButton(onClick = { isSearchActive = true }) {
+                                Icon(Icons.Default.Search, contentDescription = "Search")
+                            }
+                        } else if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Clear")
+                            }
+                        }
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 )
             },
@@ -94,7 +166,10 @@ class CategoryListScreen : Screen {
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "No categories yet.\nTap + to add one.",
+                        text = if (isSearchActive && searchQuery.isNotBlank())
+                            "No results for \"$searchQuery\"."
+                        else
+                            "No categories yet.\nTap + to add one.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
