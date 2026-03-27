@@ -10,11 +10,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -25,6 +32,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -37,10 +45,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import com.wlitkopa.thoughts.data.local.ThemeRepository
+import com.wlitkopa.thoughts.data.remote.SupabasePreferences
+import com.wlitkopa.thoughts.data.remote.SupabaseSyncService
 import com.wlitkopa.thoughts.domain.usecase.category.GetAllCategoriesUseCase
 import com.wlitkopa.thoughts.domain.usecase.thought.GetRandomThoughtUseCase
 import com.wlitkopa.thoughts.notification.CronParser
@@ -60,6 +74,50 @@ private val cronPresets = listOf(
     "0 8 * * 1"    to "Every Monday at 08:00"
 )
 
+private val SUPABASE_SETUP_SQL = """
+-- Run this in your Supabase SQL Editor
+
+CREATE TABLE IF NOT EXISTS categories (
+    id text PRIMARY KEY,
+    name text NOT NULL,
+    description text NOT NULL DEFAULT '',
+    tags text[] NOT NULL DEFAULT '{}',
+    include_in_notifications boolean NOT NULL DEFAULT true,
+    created_at bigint NOT NULL,
+    color text NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS thoughts (
+    id text NOT NULL PRIMARY KEY,
+    content text NOT NULL,
+    author text NOT NULL DEFAULT '',
+    source text NOT NULL DEFAULT '',
+    note text NOT NULL DEFAULT '',
+    category_id text NOT NULL,
+    tags text[] NOT NULL DEFAULT '{}',
+    include_in_draws boolean NOT NULL DEFAULT true,
+    created_at bigint NOT NULL,
+    updated_at bigint NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS saved_lists (
+    id text NOT NULL PRIMARY KEY,
+    name text NOT NULL,
+    description text NOT NULL DEFAULT '',
+    filter_category_ids text[] NOT NULL DEFAULT '{}',
+    filter_tags text[] NOT NULL DEFAULT '{}',
+    filter_authors text[] NOT NULL DEFAULT '{}',
+    filter_sources text[] NOT NULL DEFAULT '{}',
+    pinned_thought_ids text[] NOT NULL DEFAULT '{}',
+    created_at bigint NOT NULL
+);
+
+-- Disable Row Level Security (for personal use without authentication)
+ALTER TABLE categories DISABLE ROW LEVEL SECURITY;
+ALTER TABLE thoughts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE saved_lists DISABLE ROW LEVEL SECURITY;
+""".trimIndent()
+
 class SettingsScreen : Screen {
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -71,6 +129,9 @@ class SettingsScreen : Screen {
         val scheduler: NotificationScheduler = koinInject()
         val getAllCategories: GetAllCategoriesUseCase = koinInject()
         val getRandomThought: GetRandomThoughtUseCase = koinInject()
+        val supabasePrefs: SupabasePreferences = koinInject()
+        val syncService: SupabaseSyncService = koinInject()
+        val clipboardManager = LocalClipboardManager.current
 
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
@@ -88,6 +149,13 @@ class SettingsScreen : Screen {
                 if (cronValid) CronParser.describeNext(cronInput, 3) else emptyList()
             }
         }
+
+        // Supabase state
+        var supabaseUrl by remember { mutableStateOf(supabasePrefs.url) }
+        var supabaseKey by remember { mutableStateOf(supabasePrefs.anonKey) }
+        var supabaseKeyVisible by remember { mutableStateOf(false) }
+        var supabaseSyncing by remember { mutableStateOf(false) }
+        var showSqlSetup by remember { mutableStateOf(false) }
 
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -154,7 +222,6 @@ class SettingsScreen : Screen {
                     ) {
                         Spacer(modifier = Modifier.height(4.dp))
 
-                        // Cron expression input
                         OutlinedTextField(
                             value = cronInput,
                             onValueChange = { cronInput = it },
@@ -180,7 +247,6 @@ class SettingsScreen : Screen {
                             )
                         }
 
-                        // Next executions preview
                         if (cronValid && nextExecutions.isNotEmpty()) {
                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(
@@ -198,7 +264,6 @@ class SettingsScreen : Screen {
                             }
                         }
 
-                        // Presets
                         Text(
                             "Presets:",
                             style = MaterialTheme.typography.labelMedium,
@@ -222,7 +287,6 @@ class SettingsScreen : Screen {
                             }
                         }
 
-                        // Categories filter
                         if (categories.isNotEmpty()) {
                             HorizontalDivider()
                             Text(
@@ -249,7 +313,6 @@ class SettingsScreen : Screen {
                             }
                         }
 
-                        // Apply
                         Button(
                             onClick = {
                                 notifPrefs.cronExpression = cronInput
@@ -266,7 +329,6 @@ class SettingsScreen : Screen {
                             Text("Apply")
                         }
 
-                        // Test notification
                         OutlinedButton(
                             onClick = {
                                 scope.launch {
@@ -288,6 +350,184 @@ class SettingsScreen : Screen {
 
                         Spacer(modifier = Modifier.height(16.dp))
                     }
+                }
+
+                HorizontalDivider()
+
+                // ── Supabase Sync ────────────────────────────────────────────
+                SectionHeader("Supabase Sync")
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        "Connect to your own Supabase project to sync and import data across devices.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    OutlinedTextField(
+                        value = supabaseUrl,
+                        onValueChange = { supabaseUrl = it },
+                        label = { Text("Supabase URL") },
+                        placeholder = { Text("https://xxxx.supabase.co") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    OutlinedTextField(
+                        value = supabaseKey,
+                        onValueChange = { supabaseKey = it },
+                        label = { Text("Anon Key") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        visualTransformation = if (supabaseKeyVisible)
+                            VisualTransformation.None
+                        else
+                            PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { supabaseKeyVisible = !supabaseKeyVisible }) {
+                                Icon(
+                                    imageVector = if (supabaseKeyVisible) Icons.Default.Visibility
+                                                  else Icons.Default.VisibilityOff,
+                                    contentDescription = "Toggle key visibility"
+                                )
+                            }
+                        }
+                    )
+
+                    Button(
+                        onClick = {
+                            supabasePrefs.url = supabaseUrl.trim()
+                            supabasePrefs.anonKey = supabaseKey.trim()
+                            scope.launch { snackbarHostState.showSnackbar("Credentials saved.") }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = supabaseUrl.isNotBlank() && supabaseKey.isNotBlank()
+                    ) {
+                        Text("Save credentials")
+                    }
+
+                    // Operations row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch {
+                                    supabaseSyncing = true
+                                    syncService.testConnection()
+                                        .onSuccess {
+                                            snackbarHostState.showSnackbar("Connected successfully!")
+                                        }
+                                        .onFailure { e ->
+                                            snackbarHostState.showSnackbar("Failed: ${e.message}")
+                                        }
+                                    supabaseSyncing = false
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            enabled = !supabaseSyncing && supabasePrefs.isConfigured
+                        ) {
+                            Text("Test")
+                        }
+
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    supabaseSyncing = true
+                                    syncService.upload()
+                                        .onSuccess {
+                                            snackbarHostState.showSnackbar("Upload complete!")
+                                        }
+                                        .onFailure { e ->
+                                            snackbarHostState.showSnackbar("Upload failed: ${e.message}")
+                                        }
+                                    supabaseSyncing = false
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            enabled = !supabaseSyncing && supabasePrefs.isConfigured
+                        ) {
+                            Text("Upload")
+                        }
+
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    supabaseSyncing = true
+                                    syncService.download()
+                                        .onSuccess { (cats, thoughts, lists) ->
+                                            snackbarHostState.showSnackbar(
+                                                "Imported: $cats categories, $thoughts thoughts, $lists lists"
+                                            )
+                                        }
+                                        .onFailure { e ->
+                                            snackbarHostState.showSnackbar("Import failed: ${e.message}")
+                                        }
+                                    supabaseSyncing = false
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            enabled = !supabaseSyncing && supabasePrefs.isConfigured
+                        ) {
+                            Text("Import")
+                        }
+                    }
+
+                    if (supabaseSyncing) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+
+                    // SQL setup toggle
+                    TextButton(
+                        onClick = { showSqlSetup = !showSqlSetup },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (showSqlSetup) "Hide setup SQL ▲" else "Show setup SQL ▼")
+                    }
+
+                    AnimatedVisibility(visible = showSqlSetup) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                "Run this SQL in your Supabase project → SQL Editor:",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            SelectionContainer {
+                                Text(
+                                    text = SUPABASE_SETUP_SQL,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(8.dp)
+                                )
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    clipboardManager.setText(AnnotatedString(SUPABASE_SETUP_SQL))
+                                    scope.launch { snackbarHostState.showSnackbar("SQL copied to clipboard!") }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Copy SQL")
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }

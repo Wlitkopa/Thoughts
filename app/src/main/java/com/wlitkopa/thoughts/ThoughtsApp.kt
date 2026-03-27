@@ -4,6 +4,7 @@ import android.app.Application
 import com.wlitkopa.thoughts.di.databaseModule
 import com.wlitkopa.thoughts.di.notificationModule
 import com.wlitkopa.thoughts.di.repositoryModule
+import com.wlitkopa.thoughts.di.supabaseModule
 import com.wlitkopa.thoughts.di.useCaseModule
 import com.wlitkopa.thoughts.notification.createNotificationChannel
 import org.koin.android.ext.koin.androidContext
@@ -15,7 +16,7 @@ class ThoughtsApp : Application() {
         createNotificationChannel(this)
         startKoin {
             androidContext(this@ThoughtsApp)
-            modules(databaseModule, repositoryModule, useCaseModule, notificationModule)
+            modules(databaseModule, repositoryModule, useCaseModule, notificationModule, supabaseModule)
         }
     }
 }
