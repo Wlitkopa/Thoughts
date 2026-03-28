@@ -3,6 +3,7 @@ package com.wlitkopa.thoughts.notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.graphics.Color
 import androidx.core.app.NotificationCompat
 import com.wlitkopa.thoughts.R
 import com.wlitkopa.thoughts.domain.model.Thought
@@ -29,7 +30,8 @@ fun showThoughtNotification(context: Context, thought: Thought) {
         .ifBlank { "Thoughts" }
 
     val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-        .setSmallIcon(R.drawable.ic_launcher_foreground)
+        .setSmallIcon(R.drawable.ic_notification)
+        .setColor(Color.parseColor("#5C2E10"))
         .setContentTitle(title)
         .setContentText(thought.content)
         .setStyle(NotificationCompat.BigTextStyle().bigText(thought.content))

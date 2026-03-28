@@ -466,19 +466,21 @@ class SettingsScreen : Screen {
                         label = { Text("Anon Key") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        visualTransformation = if (supabaseKeyVisible)
+                        visualTransformation = if (supabaseKeyVisible && !supabasePrefs.isConfigured)
                             VisualTransformation.None
                         else
                             PasswordVisualTransformation(),
-                        trailingIcon = {
-                            IconButton(onClick = { supabaseKeyVisible = !supabaseKeyVisible }) {
-                                Icon(
-                                    imageVector = if (supabaseKeyVisible) Icons.Default.Visibility
-                                                  else Icons.Default.VisibilityOff,
-                                    contentDescription = "Toggle key visibility"
-                                )
+                        trailingIcon = if (!supabasePrefs.isConfigured) {
+                            {
+                                IconButton(onClick = { supabaseKeyVisible = !supabaseKeyVisible }) {
+                                    Icon(
+                                        imageVector = if (supabaseKeyVisible) Icons.Default.Visibility
+                                                      else Icons.Default.VisibilityOff,
+                                        contentDescription = "Toggle key visibility"
+                                    )
+                                }
                             }
-                        }
+                        } else null
                     )
 
                     Button(

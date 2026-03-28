@@ -271,6 +271,7 @@ class CategoryListScreen : Screen {
                             isSelected = category.id in selectedIds,
                             isMultiSelectMode = isMultiSelect,
                             onLongClick = { selectedIds = selectedIds + category.id },
+                            onClick = { navigator.push(CategoryThoughtsScreen(category.id, category.name)) },
                             onSelect = {
                                 selectedIds = if (category.id in selectedIds)
                                     selectedIds - category.id
@@ -435,7 +436,8 @@ private fun CategoryItem(
     isSelected: Boolean = false,
     isMultiSelectMode: Boolean = false,
     onLongClick: () -> Unit = {},
-    onSelect: () -> Unit = {}
+    onSelect: () -> Unit = {},
+    onClick: () -> Unit = {}
 ) {
     val barColor = if (category.color.isNotEmpty()) {
         runCatching { Color(android.graphics.Color.parseColor(category.color)) }.getOrNull()
@@ -445,7 +447,7 @@ private fun CategoryItem(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
-                onClick = { if (isMultiSelectMode) onSelect() else {} },
+                onClick = { if (isMultiSelectMode) onSelect() else onClick() },
                 onLongClick = onLongClick
             ),
         colors = CardDefaults.cardColors(
