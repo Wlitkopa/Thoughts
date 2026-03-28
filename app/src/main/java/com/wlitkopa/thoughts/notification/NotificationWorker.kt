@@ -24,9 +24,11 @@ class NotificationWorker(
 
         val thought = getRandomThought(
             categoryIds = prefs.categoryIds.toList(),
-            tags = prefs.tags.toList()
+            tags = prefs.tags.toList(),
+            excludeId = prefs.lastThoughtId
         )
         if (thought != null) {
+            prefs.lastThoughtId = thought.id
             showThoughtNotification(context, thought)
         }
 

@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -156,6 +157,8 @@ class SettingsScreen : Screen {
         var selectedTags by remember { mutableStateOf(notifPrefs.tags) }
 
         var backupWorking by remember { mutableStateOf(false) }
+        var showUploadConfirm by remember { mutableStateOf(false) }
+        var showSupabaseImportConfirm by remember { mutableStateOf(false) }
 
         val exportLauncher = rememberLauncherForActivityResult(
             ActivityResultContracts.CreateDocument("application/json")
@@ -516,19 +519,7 @@ class SettingsScreen : Screen {
                         }
 
                         Button(
-                            onClick = {
-                                scope.launch {
-                                    supabaseSyncing = true
-                                    syncService.upload()
-                                        .onSuccess {
-                                            snackbarHostState.showSnackbar("Upload complete!")
-                                        }
-                                        .onFailure { e ->
-                                            snackbarHostState.showSnackbar("Upload failed: ${e.message}")
-                                        }
-                                    supabaseSyncing = false
-                                }
-                            },
+                            onClick = { showUploadConfirm = true },
                             modifier = Modifier.weight(1f),
                             enabled = !supabaseSyncing && supabasePrefs.isConfigured
                         ) {
@@ -536,21 +527,7 @@ class SettingsScreen : Screen {
                         }
 
                         Button(
-                            onClick = {
-                                scope.launch {
-                                    supabaseSyncing = true
-                                    syncService.download()
-                                        .onSuccess { (cats, thoughts, lists) ->
-                                            snackbarHostState.showSnackbar(
-                                                "Imported: $cats categories, $thoughts thoughts, $lists lists"
-                                            )
-                                        }
-                                        .onFailure { e ->
-                                            snackbarHostState.showSnackbar("Import failed: ${e.message}")
-                                        }
-                                    supabaseSyncing = false
-                                }
-                            },
+                            onClick = { showSupabaseImportConfirm = true },
                             modifier = Modifier.weight(1f),
                             enabled = !supabaseSyncing && supabasePrefs.isConfigured
                         ) {
@@ -662,6 +639,54 @@ class SettingsScreen : Screen {
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
+        }
+
+        if (showUploadConfirm) {
+            AlertDialog(
+                onDismissRequest = { showUploadConfirm = false },
+                title = { Text("Upload to Supabase") },
+                text = { Text("This will overwrite Supabase with your current local data. Records deleted locally will also be removed from Supabase.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showUploadConfirm = false
+                        scope.launch {
+                            supabaseSyncing = true
+                            syncService.upload()
+                                .onSuccess { snackbarHostState.showSnackbar("Upload complete!") }
+                                .onFailure { e -> snackbarHostState.showSnackbar("Upload failed: ${e.message}") }
+                            supabaseSyncing = false
+                        }
+                    }) { Text("Upload") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showUploadConfirm = false }) { Text("Cancel") }
+                }
+            )
+        }
+
+        if (showSupabaseImportConfirm) {
+            AlertDialog(
+                onDismissRequest = { showSupabaseImportConfirm = false },
+                title = { Text("Import from Supabase") },
+                text = { Text("This will merge Supabase data into your local database. Existing local records will be updated, new ones added.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showSupabaseImportConfirm = false
+                        scope.launch {
+                            supabaseSyncing = true
+                            syncService.download()
+                                .onSuccess { (cats, thoughts, lists) ->
+                                    snackbarHostState.showSnackbar("Imported: $cats categories, $thoughts thoughts, $lists lists")
+                                }
+                                .onFailure { e -> snackbarHostState.showSnackbar("Import failed: ${e.message}") }
+                            supabaseSyncing = false
+                        }
+                    }) { Text("Import") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showSupabaseImportConfirm = false }) { Text("Cancel") }
+                }
+            )
         }
     }
 }

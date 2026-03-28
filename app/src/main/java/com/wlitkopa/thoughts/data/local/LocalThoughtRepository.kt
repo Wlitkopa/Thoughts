@@ -47,24 +47,23 @@ class LocalThoughtRepository(database: ThoughtsDatabase) : ThoughtRepository {
     override fun getAllSources(): Flow<List<String>> =
         queries.selectAllSources().asFlow().mapToList(Dispatchers.IO)
 
-    override suspend fun getRandom(categoryIds: List<String>, tags: List<String>): Thought? {
+    override suspend fun getRandom(categoryIds: List<String>, tags: List<String>, excludeId: String): Thought? {
         return withContext(Dispatchers.IO) {
             when {
                 categoryIds.isEmpty() && tags.isEmpty() ->
-                    queries.getRandomAll().executeAsOneOrNull()?.toDomain()
+                    queries.getRandomAll(excludeId).executeAsOneOrNull()?.toDomain()
 
                 categoryIds.isNotEmpty() && tags.isEmpty() ->
-                    queries.getRandomByCategories(categoryIds).executeAsOneOrNull()?.toDomain()
+                    queries.getRandomByCategories(excludeId, categoryIds).executeAsOneOrNull()?.toDomain()
 
                 categoryIds.isEmpty() && tags.isNotEmpty() ->
-                    // Dla wielu tagów losujemy jeden z nich i szukamy losowej myśli z tym tagiem
                     tags.shuffled().firstNotNullOfOrNull { tag ->
-                        queries.getRandomByTags(tag).executeAsOneOrNull()?.toDomain()
+                        queries.getRandomByTags(excludeId, tag).executeAsOneOrNull()?.toDomain()
                     }
 
                 else ->
                     tags.shuffled().firstNotNullOfOrNull { tag ->
-                        queries.getRandomByCategoriesAndTags(categoryIds, tag).executeAsOneOrNull()?.toDomain()
+                        queries.getRandomByCategoriesAndTags(excludeId, categoryIds, tag).executeAsOneOrNull()?.toDomain()
                     }
             }
         }

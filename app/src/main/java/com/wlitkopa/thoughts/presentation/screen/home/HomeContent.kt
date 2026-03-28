@@ -48,7 +48,7 @@ fun HomeContent() {
     fun draw() {
         scope.launch {
             isLoading = true
-            thought = getRandomThought()
+            thought = getRandomThought(excludeId = thought?.id ?: "")
             isLoading = false
         }
     }

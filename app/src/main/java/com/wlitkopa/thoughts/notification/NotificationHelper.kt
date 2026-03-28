@@ -9,7 +9,6 @@ import com.wlitkopa.thoughts.domain.model.Thought
 
 const val CHANNEL_ID = "thoughts_channel"
 private const val CHANNEL_NAME = "Thoughts"
-private const val NOTIFICATION_ID = 1001
 
 fun createNotificationChannel(context: Context) {
     val channel = NotificationChannel(
@@ -39,5 +38,5 @@ fun showThoughtNotification(context: Context, thought: Thought) {
         .build()
 
     val manager = context.getSystemService(NotificationManager::class.java)
-    manager.notify(NOTIFICATION_ID, notification)
+    manager.notify(System.currentTimeMillis().toInt(), notification)
 }

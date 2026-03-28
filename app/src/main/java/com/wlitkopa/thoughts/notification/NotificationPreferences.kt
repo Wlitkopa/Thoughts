@@ -7,6 +7,7 @@ private const val KEY_ENABLED = "enabled"
 private const val KEY_CRON = "cron_expression"
 private const val KEY_CATEGORY_IDS = "category_ids"
 private const val KEY_TAGS = "tags"
+private const val KEY_LAST_THOUGHT_ID = "last_thought_id"
 
 const val DEFAULT_CRON = "0 8 * * *" // every day at 08:00
 
@@ -29,4 +30,8 @@ class NotificationPreferences(context: Context) {
     var tags: Set<String>
         get() = prefs.getStringSet(KEY_TAGS, emptySet()) ?: emptySet()
         set(value) = prefs.edit().putStringSet(KEY_TAGS, value).apply()
+
+    var lastThoughtId: String
+        get() = prefs.getString(KEY_LAST_THOUGHT_ID, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_LAST_THOUGHT_ID, value).apply()
 }

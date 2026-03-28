@@ -54,23 +54,27 @@ SELECT DISTINCT source FROM ThoughtEntity WHERE source != '' ORDER BY source ASC
 getRandomAll:
 SELECT * FROM ThoughtEntity
 WHERE include_in_draws = 1
+  AND id != :excludeId
 ORDER BY RANDOM() LIMIT 1;
 
 getRandomByCategories:
 SELECT * FROM ThoughtEntity
 WHERE include_in_draws = 1
+  AND id != :excludeId
   AND category_id IN :categoryIds
 ORDER BY RANDOM() LIMIT 1;
 
 getRandomByTags:
 SELECT * FROM ThoughtEntity
 WHERE include_in_draws = 1
+  AND id != :excludeId
   AND (tags LIKE '%|' || :tag || '|%')
 ORDER BY RANDOM() LIMIT 1;
 
 getRandomByCategoriesAndTags:
 SELECT * FROM ThoughtEntity
 WHERE include_in_draws = 1
+  AND id != :excludeId
   AND category_id IN :categoryIds
   AND (tags LIKE '%|' || :tag || '|%')
 ORDER BY RANDOM() LIMIT 1;

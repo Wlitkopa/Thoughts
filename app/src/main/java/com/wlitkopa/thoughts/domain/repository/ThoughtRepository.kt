@@ -14,7 +14,7 @@ interface ThoughtRepository {
     fun getAllTags(): Flow<List<String>>
     fun getAllAuthors(): Flow<List<String>>
     fun getAllSources(): Flow<List<String>>
-    suspend fun getRandom(categoryIds: List<String> = emptyList(), tags: List<String> = emptyList()): Thought?
+    suspend fun getRandom(categoryIds: List<String> = emptyList(), tags: List<String> = emptyList(), excludeId: String = ""): Thought?
     suspend fun updateTags(ids: List<String>, tags: List<String>)
     suspend fun removeTags(ids: List<String>, tags: List<String>)
     suspend fun insert(thought: Thought)

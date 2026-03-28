@@ -10,7 +10,8 @@ class GetRandomThoughtUseCase(
 ) {
     suspend operator fun invoke(
         categoryIds: List<String> = emptyList(),
-        tags: List<String> = emptyList()
+        tags: List<String> = emptyList(),
+        excludeId: String = ""
     ): com.wlitkopa.thoughts.domain.model.Thought? {
         // Categories with includeInNotifications = false are excluded from draws
         val activeIds = categoryRepository.getAll().first()
@@ -26,6 +27,6 @@ class GetRandomThoughtUseCase(
         // All categories excluded → nothing to draw
         if (effectiveIds.isEmpty()) return null
 
-        return thoughtRepository.getRandom(effectiveIds, tags)
+        return thoughtRepository.getRandom(effectiveIds, tags, excludeId)
     }
 }
