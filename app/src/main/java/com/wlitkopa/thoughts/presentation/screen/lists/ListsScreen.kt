@@ -1,5 +1,8 @@
 package com.wlitkopa.thoughts.presentation.screen.lists
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,8 +19,12 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -59,11 +66,20 @@ class ListsScreen : Screen {
 
         val lists by getAllSavedLists().collectAsState(initial = emptyList())
         var listToDelete by remember { mutableStateOf<SavedList?>(null) }
+        var selectedIds by remember { mutableStateOf(emptySet<String>()) }
+        var showBulkDeleteDialog by remember { mutableStateOf(false) }
+
+        val isSelecting = selectedIds.isNotEmpty()
+
+        BackHandler(enabled = isSelecting) { selectedIds = emptySet() }
 
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Lists") },
+                    title = {
+                        if (isSelecting) Text("${selectedIds.size} selected")
+                        else Text("Lists")
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                         titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -71,11 +87,43 @@ class ListsScreen : Screen {
                 )
             },
             floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { navigator.push(AddEditListScreen()) },
-                    containerColor = MaterialTheme.colorScheme.secondary
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add list")
+                if (!isSelecting) {
+                    FloatingActionButton(
+                        onClick = { navigator.push(AddEditListScreen()) },
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Add list")
+                    }
+                }
+            },
+            bottomBar = {
+                if (isSelecting) {
+                    BottomAppBar {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            TextButton(
+                                onClick = { selectedIds = emptySet() },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Cancel")
+                            }
+                            Button(
+                                onClick = { showBulkDeleteDialog = true },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error
+                                )
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = null)
+                                Spacer(modifier = Modifier.padding(4.dp))
+                                Text("Delete (${selectedIds.size})")
+                            }
+                        }
+                    }
                 }
             }
         ) { padding ->
@@ -105,7 +153,21 @@ class ListsScreen : Screen {
                     items(lists, key = { it.id }) { savedList ->
                         SavedListItem(
                             savedList = savedList,
-                            onClick = { navigator.push(ListDetailScreen(savedList.id)) },
+                            isSelecting = isSelecting,
+                            isSelected = selectedIds.contains(savedList.id),
+                            onClick = {
+                                if (isSelecting) {
+                                    selectedIds = if (selectedIds.contains(savedList.id))
+                                        selectedIds - savedList.id
+                                    else
+                                        selectedIds + savedList.id
+                                } else {
+                                    navigator.push(ListDetailScreen(savedList.id))
+                                }
+                            },
+                            onLongClick = {
+                                selectedIds = selectedIds + savedList.id
+                            },
                             onEdit = { navigator.push(AddEditListScreen(savedList.id)) },
                             onDelete = { listToDelete = savedList }
                         )
@@ -132,20 +194,51 @@ class ListsScreen : Screen {
                 }
             )
         }
+
+        if (showBulkDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showBulkDeleteDialog = false },
+                title = { Text("Delete lists") },
+                text = { Text("Delete ${selectedIds.size} list${if (selectedIds.size == 1) "" else "s"}? This cannot be undone.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val toDelete = selectedIds
+                        scope.launch { toDelete.forEach { deleteList(it) } }
+                        selectedIds = emptySet()
+                        showBulkDeleteDialog = false
+                    }) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showBulkDeleteDialog = false }) { Text("Cancel") }
+                }
+            )
+        }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SavedListItem(
     savedList: SavedList,
+    isSelecting: Boolean,
+    isSelected: Boolean,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.surface
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -154,6 +247,12 @@ private fun SavedListItem(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (isSelecting) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = { onClick() }
+                )
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = savedList.name,
@@ -185,11 +284,13 @@ private fun SavedListItem(
                     )
                 }
             }
-            IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+            if (!isSelecting) {
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }

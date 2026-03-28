@@ -1,5 +1,8 @@
 package com.wlitkopa.thoughts.presentation.screen.settings
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -52,10 +55,12 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
+import com.wlitkopa.thoughts.data.local.LocalBackupService
 import com.wlitkopa.thoughts.data.local.ThemeRepository
 import com.wlitkopa.thoughts.data.remote.SupabasePreferences
 import com.wlitkopa.thoughts.data.remote.SupabaseSyncService
 import com.wlitkopa.thoughts.domain.usecase.category.GetAllCategoriesUseCase
+import com.wlitkopa.thoughts.domain.usecase.thought.GetAllThoughtTagsUseCase
 import com.wlitkopa.thoughts.domain.usecase.thought.GetRandomThoughtUseCase
 import com.wlitkopa.thoughts.notification.CronParser
 import com.wlitkopa.thoughts.notification.DEFAULT_CRON
@@ -64,6 +69,9 @@ import com.wlitkopa.thoughts.notification.NotificationScheduler
 import com.wlitkopa.thoughts.notification.showThoughtNotification
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private val cronPresets = listOf(
     "0 8 * * *"    to "Daily at 08:00",
@@ -128,9 +136,11 @@ class SettingsScreen : Screen {
         val notifPrefs: NotificationPreferences = koinInject()
         val scheduler: NotificationScheduler = koinInject()
         val getAllCategories: GetAllCategoriesUseCase = koinInject()
+        val getAllTags: GetAllThoughtTagsUseCase = koinInject()
         val getRandomThought: GetRandomThoughtUseCase = koinInject()
         val supabasePrefs: SupabasePreferences = koinInject()
         val syncService: SupabaseSyncService = koinInject()
+        val backupService: LocalBackupService = koinInject()
         val clipboardManager = LocalClipboardManager.current
 
         val scope = rememberCoroutineScope()
@@ -138,10 +148,51 @@ class SettingsScreen : Screen {
 
         val isDarkTheme by themeRepository.isDarkTheme.collectAsState()
         val categories by getAllCategories().collectAsState(initial = emptyList())
+        val allTags by getAllTags().collectAsState(initial = emptyList())
 
         var notifEnabled by remember { mutableStateOf(notifPrefs.isEnabled) }
         var cronInput by remember { mutableStateOf(notifPrefs.cronExpression) }
         var selectedCategoryIds by remember { mutableStateOf(notifPrefs.categoryIds) }
+        var selectedTags by remember { mutableStateOf(notifPrefs.tags) }
+
+        var backupWorking by remember { mutableStateOf(false) }
+
+        val exportLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.CreateDocument("application/json")
+        ) { uri: Uri? ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            scope.launch {
+                backupWorking = true
+                runCatching {
+                    val json = backupService.createBackup()
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray()) }
+                }.onSuccess {
+                    snackbarHostState.showSnackbar("Backup exported successfully!")
+                }.onFailure { e ->
+                    snackbarHostState.showSnackbar("Export failed: ${e.message}")
+                }
+                backupWorking = false
+            }
+        }
+
+        val importLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.OpenDocument()
+        ) { uri: Uri? ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            scope.launch {
+                backupWorking = true
+                runCatching {
+                    val json = context.contentResolver.openInputStream(uri)?.bufferedReader()?.readText()
+                        ?: error("Could not read file")
+                    backupService.restoreBackup(json)
+                }.onSuccess { (cats, thoughts, lists) ->
+                    snackbarHostState.showSnackbar("Imported: $cats categories, $thoughts thoughts, $lists lists")
+                }.onFailure { e ->
+                    snackbarHostState.showSnackbar("Import failed: ${e.message}")
+                }
+                backupWorking = false
+            }
+        }
 
         val cronValid by remember { derivedStateOf { CronParser.isValid(cronInput) } }
         val nextExecutions by remember {
@@ -313,10 +364,37 @@ class SettingsScreen : Screen {
                             }
                         }
 
+                        if (allTags.isNotEmpty()) {
+                            HorizontalDivider()
+                            Text(
+                                "Tags (none selected = all)",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            allTags.forEach { tag ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = selectedTags.contains(tag),
+                                        onCheckedChange = { checked ->
+                                            selectedTags = if (checked)
+                                                selectedTags + tag
+                                            else
+                                                selectedTags - tag
+                                        }
+                                    )
+                                    Text(tag, style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                        }
+
                         Button(
                             onClick = {
                                 notifPrefs.cronExpression = cronInput
                                 notifPrefs.categoryIds = selectedCategoryIds
+                                notifPrefs.tags = selectedTags
                                 scheduler.schedule(cronInput)
                                 scope.launch {
                                     val next = CronParser.describeNext(cronInput, 1).firstOrNull()
@@ -333,7 +411,8 @@ class SettingsScreen : Screen {
                             onClick = {
                                 scope.launch {
                                     val thought = getRandomThought(
-                                        categoryIds = selectedCategoryIds.toList()
+                                        categoryIds = selectedCategoryIds.toList(),
+                                        tags = selectedTags.toList()
                                     )
                                     if (thought != null) {
                                         showThoughtNotification(context, thought)
@@ -524,6 +603,59 @@ class SettingsScreen : Screen {
                             ) {
                                 Text("Copy SQL")
                             }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                HorizontalDivider()
+
+                // ── Local Backup ─────────────────────────────────────────────
+                SectionHeader("Local Backup")
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        "Export all your data to a JSON file or restore from a previous backup.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                val date = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+                                exportLauncher.launch("thoughts_backup_$date.json")
+                            },
+                            modifier = Modifier.weight(1f),
+                            enabled = !backupWorking
+                        ) {
+                            Text("Export")
+                        }
+
+                        OutlinedButton(
+                            onClick = { importLauncher.launch(arrayOf("application/json")) },
+                            modifier = Modifier.weight(1f),
+                            enabled = !backupWorking
+                        ) {
+                            Text("Import")
+                        }
+                    }
+
+                    if (backupWorking) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            CircularProgressIndicator()
                         }
                     }
 

@@ -1,5 +1,6 @@
 package com.wlitkopa.thoughts.di
 
+import com.wlitkopa.thoughts.data.local.LocalBackupService
 import com.wlitkopa.thoughts.data.remote.SupabasePreferences
 import com.wlitkopa.thoughts.data.remote.SupabaseSyncService
 import org.koin.android.ext.koin.androidContext
@@ -10,6 +11,13 @@ val supabaseModule = module {
     single {
         SupabaseSyncService(
             prefs = get(),
+            thoughtRepository = get(),
+            categoryRepository = get(),
+            savedListRepository = get()
+        )
+    }
+    single {
+        LocalBackupService(
             thoughtRepository = get(),
             categoryRepository = get(),
             savedListRepository = get()
