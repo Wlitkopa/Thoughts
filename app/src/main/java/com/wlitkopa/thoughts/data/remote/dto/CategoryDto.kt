@@ -8,11 +8,11 @@ import kotlinx.serialization.Serializable
 data class CategoryDto(
     val id: String,
     val name: String,
-    val description: String = "",
-    val tags: List<String> = emptyList(),
-    @SerialName("include_in_notifications") val includeInNotifications: Boolean = true,
+    val description: String,
+    val tags: List<String>,
+    @SerialName("include_in_notifications") val includeInNotifications: Boolean,
     @SerialName("created_at") val createdAt: Long,
-    val color: String = ""
+    val color: String
 ) {
     fun toDomain() = Category(
         id = id,

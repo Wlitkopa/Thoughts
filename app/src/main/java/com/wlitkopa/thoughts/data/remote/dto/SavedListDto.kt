@@ -8,12 +8,12 @@ import kotlinx.serialization.Serializable
 data class SavedListDto(
     val id: String,
     val name: String,
-    val description: String = "",
-    @SerialName("filter_category_ids") val filterCategoryIds: List<String> = emptyList(),
-    @SerialName("filter_tags") val filterTags: List<String> = emptyList(),
-    @SerialName("filter_authors") val filterAuthors: List<String> = emptyList(),
-    @SerialName("filter_sources") val filterSources: List<String> = emptyList(),
-    @SerialName("pinned_thought_ids") val pinnedThoughtIds: List<String> = emptyList(),
+    val description: String,
+    @SerialName("filter_category_ids") val filterCategoryIds: List<String>,
+    @SerialName("filter_tags") val filterTags: List<String>,
+    @SerialName("filter_authors") val filterAuthors: List<String>,
+    @SerialName("filter_sources") val filterSources: List<String>,
+    @SerialName("pinned_thought_ids") val pinnedThoughtIds: List<String>,
     @SerialName("created_at") val createdAt: Long
 ) {
     fun toDomain() = SavedList(

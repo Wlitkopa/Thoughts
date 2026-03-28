@@ -8,12 +8,12 @@ import kotlinx.serialization.Serializable
 data class ThoughtDto(
     val id: String,
     val content: String,
-    val author: String = "",
-    val source: String = "",
-    val note: String = "",
+    val author: String,
+    val source: String,
+    val note: String,
     @SerialName("category_id") val categoryId: String,
-    val tags: List<String> = emptyList(),
-    @SerialName("include_in_draws") val includeInDraws: Boolean = true,
+    val tags: List<String>,
+    @SerialName("include_in_draws") val includeInDraws: Boolean,
     @SerialName("created_at") val createdAt: Long,
     @SerialName("updated_at") val updatedAt: Long
 ) {

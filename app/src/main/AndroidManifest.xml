@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Wymagane na Android 13+ do wyświetlania powiadomień -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Wymagane przez WorkManager do budzenia się w określonym czasie -->
