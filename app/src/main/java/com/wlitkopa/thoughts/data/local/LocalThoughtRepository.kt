@@ -63,7 +63,7 @@ class LocalThoughtRepository(database: ThoughtsDatabase) : ThoughtRepository {
 
                 else ->
                     tags.shuffled().firstNotNullOfOrNull { tag ->
-                        queries.getRandomByCategoriesAndTags(excludeId, categoryIds, tag).executeAsOneOrNull()?.toDomain()
+                        queries.getRandomByCategoriesOrTag(excludeId, categoryIds, tag).executeAsOneOrNull()?.toDomain()
                     }
             }
         }

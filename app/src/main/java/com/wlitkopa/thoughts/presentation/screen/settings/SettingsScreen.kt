@@ -40,6 +40,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -155,6 +156,15 @@ class SettingsScreen : Screen {
         var cronInput by remember { mutableStateOf(notifPrefs.cronExpression) }
         var selectedCategoryIds by remember { mutableStateOf(notifPrefs.categoryIds) }
         var selectedTags by remember { mutableStateOf(notifPrefs.tags) }
+
+        // Remove stale saved tags that no longer exist
+        LaunchedEffect(allTags) {
+            if (allTags.isNotEmpty()) {
+                val validTags = allTags.toSet()
+                val cleaned = selectedTags.intersect(validTags)
+                if (cleaned != selectedTags) selectedTags = cleaned
+            }
+        }
 
         var backupWorking by remember { mutableStateOf(false) }
         var showUploadConfirm by remember { mutableStateOf(false) }
@@ -341,14 +351,15 @@ class SettingsScreen : Screen {
                             }
                         }
 
-                        if (categories.isNotEmpty()) {
+                        val notifCategories = categories.filter { it.includeInNotifications }
+                        if (notifCategories.isNotEmpty()) {
                             HorizontalDivider()
                             Text(
                                 "Categories (none selected = all)",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            categories.forEach { category ->
+                            notifCategories.forEach { category ->
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically

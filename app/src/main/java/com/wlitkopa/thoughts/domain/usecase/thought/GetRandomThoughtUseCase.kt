@@ -13,20 +13,19 @@ class GetRandomThoughtUseCase(
         tags: List<String> = emptyList(),
         excludeId: String = ""
     ): com.wlitkopa.thoughts.domain.model.Thought? {
-        // Categories with includeInNotifications = false are excluded from draws
         val activeIds = categoryRepository.getAll().first()
             .filter { it.includeInNotifications }
             .map { it.id }
 
-        val effectiveIds = if (categoryIds.isEmpty()) {
-            activeIds
-        } else {
-            categoryIds.filter { it in activeIds }
-        }
+        val effectiveIds = categoryIds.filter { it in activeIds }
 
-        // All categories excluded → nothing to draw
-        if (effectiveIds.isEmpty()) return null
+        // User explicitly selected categories but none are dice-ON → nothing to draw
+        if (categoryIds.isNotEmpty() && effectiveIds.isEmpty()) return null
 
+        // If no dice-ON categories exist at all → nothing to draw
+        if (categoryIds.isEmpty() && activeIds.isEmpty()) return null
+
+        // Pass effectiveIds (validated selection) or empty list if user selected nothing
         return thoughtRepository.getRandom(effectiveIds, tags, excludeId)
     }
 }

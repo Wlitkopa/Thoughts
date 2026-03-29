@@ -71,12 +71,11 @@ WHERE include_in_draws = 1
   AND (tags LIKE '%|' || :tag || '|%')
 ORDER BY RANDOM() LIMIT 1;
 
-getRandomByCategoriesAndTags:
+getRandomByCategoriesOrTag:
 SELECT * FROM ThoughtEntity
 WHERE include_in_draws = 1
   AND id != :excludeId
-  AND category_id IN :categoryIds
-  AND (tags LIKE '%|' || :tag || '|%')
+  AND (category_id IN :categoryIds OR tags LIKE '%|' || :tag || '|%')
 ORDER BY RANDOM() LIMIT 1;
 
 insert:
